@@ -8,7 +8,6 @@ interface MessengerInterface {
 
     // متدهای ارسال پیام
     public function sendMessage(string $chatId, string $message, array $options = []): array;
-    public function sendFile(string $chatId, string $filePath, string $caption = ''): array;
 
     // متدهای مدیریت گروه
     public function getGroupInfo(string $groupId): array;

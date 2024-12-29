@@ -2,13 +2,14 @@
 
 namespace MessengerBot\Messengers;
 
+require_once MESSENGER_BOT_PATH . 'includes/Messengers/ProxyManager.php';
+require_once MESSENGER_BOT_PATH . 'includes/Models/Group.php';
+require_once MESSENGER_BOT_PATH . 'includes/Interfaces/MessengerInterface.php';
+
 use MessengerBot\Interfaces\MessengerInterface;
 use MessengerBot\Models\Group;
 
-require_once MESSENGER_BOT_PATH . 'includes/Messengers/ProxyManager.php';
-require_once MESSENGER_BOT_PATH . 'includes/Models/Group.php';
-
-class TelegramMessenger
+class TelegramMessenger implements MessengerInterface
 {
     private $bot_token;
     private $proxy;
@@ -54,6 +55,24 @@ class TelegramMessenger
         return 'telegram';
     }
 
+    public function sendMessage(string $chatId, string $message, array $options = []): array
+    {
+        $params = [
+            'chat_id' => $chatId,
+            'text' => $message,
+            'parse_mode' => 'HTML'
+        ];
+
+        return $this->proxy->sendRequest('sendMessage', array_merge($params, $options));
+    }
+
+    public function getGroupInfo(string $groupId): array
+    {
+        return $this->proxy->sendRequest('getChat', [
+            'chat_id' => $groupId
+        ]);
+    }
+
     public function sendPostToTelegramGroups($post_id, $post)
     {
         $content = file_get_contents('php://input');
@@ -95,84 +114,14 @@ class TelegramMessenger
 //                ]
 //            ]);
 
-            $response = $this->proxy->sendRequest('sendMessage', [
-                'chat_id' => $groups_id,
-                'text' => $message,
-                'parse_mode' => 'HTML'
-            ]);
-            error_log('ارور شماره 44444444444444444444444444444444444444444444444444444444444444');
-            error_log('Message Content: ' . print_r([
-                    'chat_id' => $groups_id,
-                    'text' => $message
-                ], true));
-            error_log('Telegram Response: ' . print_r($response, true));
+//            $response = $this->proxy->sendRequest('sendMessage', [
+//                'chat_id' => $groups_id,
+//                'text' => $message,
+//                'parse_mode' => 'HTML'
+//            ]);
+
+            $response = $this->sendMessage($groups_id, $message, []);
         }
-    }
-
-    public function addTelegramMembersReportMenu()
-    {
-        add_submenu_page(
-            'telegram-groups',
-            'گزارش اعضای گروه',
-            'گزارش اعضا',
-            'manage_options',
-            'telegram-members-report',
-            [$this, 'displayMembersReportPage']
-        );
-    }
-
-    public function displayMembersReportPage()
-    {
-        echo '<div class="wrap">';
-        echo '<h1>گزارش اعضای گروه تلگرام</h1>';
-        // دریافت لیست گروه‌ها از دیتابیس
-        $messengerType = $this->getName() . '_group';
-        $groups = $this->group->getGroups($messengerType);
-        echo '<form method="post">';
-        echo '<select name="selected_group" style="width: 300px; margin-left: 10px">';
-        echo "<option value=''>انتخاب گروه تلگرام</option>";
-        foreach ($groups as $group) {
-            $selected = (isset($_POST['selected_group']) && $_POST['selected_group'] == $group->group_id) ? 'selected' : '';
-            echo "<option value='{$group['id']}' {$selected}>{$group['title']}</option>";
-        }
-        echo '</select>';
-        echo '<input type="submit" class="button button-primary" value="نمایش اعضا">';
-        echo '</form>';
-
-        // اگر گروهی انتخاب شده، اطلاعات اعضا را نمایش بده
-        if (isset($_POST['selected_group'])) {
-            $group_id = intval($_POST['selected_group']);
-            if ($group_id) {
-                $this->displayGroupMessages($group_id);
-            }
-        }
-
-        echo '</div>';
-    }
-
-    public function displayGroupMessages($group_id)
-    {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'telegram_members';
-        $group_members = $wpdb->get_results("SELECT * FROM $table_name WHERE group_id = {$group_id}");
-        echo '<div class="wrap">';
-        echo '<h2>پیام‌های اخیر گروه</h2>';
-        echo '<table class="wp-list-table widefat fixed striped">';
-        echo '<thead><tr>';
-        echo '<th>نام کاربر</th>';
-        echo '<th>شناسه کاربر</th>';
-        echo '<th>تاریخ آخرین پیام ارسال شده</th>';
-        echo '</tr></thead><tbody>';
-        foreach ($group_members as $group_member) {
-            echo '<tr>';
-            echo '<td>' . esc_html($group_member->first_name) . '</td>';
-            echo '<td>' . esc_html($group_member->user_id) . '</td>';
-            echo '<td>' . esc_html($group_member->last_message_date) . '</td>';
-            echo '</tr>';
-        }
-        echo '</tbody></table>';
-        echo '</div>';
-        error_log($group_members);
     }
 
     public function displayTelegramSendMessagePage()
@@ -300,10 +249,13 @@ class TelegramMessenger
             if (!empty($groups) && !empty($message)) {
                 foreach ($groups as $group_id) {
                     // ارسال متن با پروکسی
-                    $response = $this->proxy->sendRequest('sendMessage', [
-                        'chat_id' => $group_id,
-                        'text' => $message
-                    ]);
+//                    $response = $this->proxy->sendRequest('sendMessage', [
+//                        'chat_id' => $group_id,
+//                        'text' => $message
+//                    ]);
+
+                    $response = $this->sendMessage($group_id, $message, []);
+
                     // اگر فایل آپلود شده باشد
                     if (!empty($_FILES['attachment']['tmp_name'])) {
                         $file_path = $_FILES['attachment']['tmp_name'];
@@ -358,7 +310,7 @@ class TelegramMessenger
                             'chat_id' => $group_id,
                             'audio' => new \CURLFile($temp_file, 'audio/wav', 'audio_message.wav')
                         ]);
-                        error_log('فایل صوتی ارسال شد');
+
                         /* کد قبلی
                         $ch = curl_init();
                         curl_setopt($ch, CURLOPT_URL, "https://api.telegram.org/bot{$token}/sendAudio");
@@ -379,10 +331,11 @@ class TelegramMessenger
                 add_action('admin_notices', function () {
                     echo '<div class="notice notice-success"><p>پیام با موفقیت ارسال شد.</p></div>';
                 });
+
+                echo 'ارسال با استفاده از انترفیس';
             }
         }
     }
-
 
     public function sendBotContact($chat_id, $bot_name)
     {
@@ -677,33 +630,14 @@ class TelegramMessenger
 
             foreach (array_unique($group_ids) as $id) {
                 // ارسال پیام متنی
-                $this->sendMessageToTelegram($id, $final_message);
+                $this->sendMessage($id, $message, []);
+
                 // ارسال پیام صوتی
                 if (!empty($voice_message)) {
                     $this->sendVoiceToTelegram($id, $voice_message);
                 }
             }
         }
-    }
-
-    public function sendMessageToTelegram($group_id, $message)
-    {
-//            $bot_token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
-//            $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
-//            $args = array(
-//                'body' => array(
-//                    'chat_id' => $group_id,
-//                    'text' => $message,
-//                    'parse_mode' => 'HTML'
-//                )
-//            );
-//            wp_remote_post($url, $args);
-
-        $this->proxy->sendRequest('sendMessage', [
-            'chat_id' => $group_id,
-            'text' => $message,
-            'parse_mode' => 'HTML'
-        ]);
     }
 
     public function sendTelegramMessage($group_id, $message)
@@ -853,7 +787,7 @@ class TelegramMessenger
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, [
                 'chat_id' => $group_id,
-                'voice' => new CURLFile($temp_file, 'audio/wav', 'voice.wav')
+                'voice' => new \CURLFile($temp_file, 'audio/wav', 'voice.wav')
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 60); // تنظیم تایم‌اوت به 60 ثانیه
@@ -888,6 +822,7 @@ class TelegramMessenger
 //        $url = "https://api.telegram.org/bot{$this->bot_token}/sendMessage?" . $param;
 //        $result = file_get_contents($url);
 
+//        ارسال با پروکسی
         $result = $this->proxy->sendRequest('sendMessage', [
             'chat_id' => $chat_id,
             'text' => $text_send,
@@ -902,9 +837,6 @@ class TelegramMessenger
             file_get_contents("https://api.telegram.org/bot{$this->bot_token}/sendMessage?" . $error_param);
         }
     }
-
-
-
 
 }
 

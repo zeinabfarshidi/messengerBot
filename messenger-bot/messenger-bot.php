@@ -181,19 +181,6 @@ class Messenger_Bot
     }
 //    ------End codes for automatically sending posts to Telegram groups------
 
-//    ------Start Telegram group member reporting codes------
-    public function add_telegram_members_report_menu() {
-        $this->telegram->addTelegramMembersReportMenu();
-    }
-    public function display_members_report_page() {
-        $this->telegram->displayMembersReportPage();
-    }
-//    Recent group messages
-    public function display_group_messages($group_id) {
-        $this->telegram->displayGroupMessages($group_id);
-    }
-//    ------End Telegram group member reporting codes------
-
 //    ------Start codes for sending messages to Telegram groups------
     public function display_telegram_send_message_page() {
         $this->telegram->displayTelegramSendMessagePage();
