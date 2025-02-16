@@ -352,44 +352,44 @@ class TelegramMessenger implements MessengerInterface
         ]);
     }
 
-    public function sendDirectMessageToMembers()
-    {
-        $token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
-        global $wpdb;
-        $debug_output = [];
-        $bot_info = wp_remote_get("https://api.telegram.org/bot{$token}/getMe");
-        $bot_data = json_decode(wp_remote_retrieve_body($bot_info));
-        $bot_name = $bot_data->result->first_name;
-        $debug_output[] = 'نام ربات: ' . $bot_name;
-
-        // دریافت لیست اعضای منحصر به فرد از همه گروه‌ها
-
-        $members = $wpdb->get_results("
-        SELECT DISTINCT user_id, first_name, username
-        FROM {$wpdb->prefix}telegram_members
-        WHERE user_id != {$bot_data->result->id}
-    ");
-
-        $debug_output[] = 'تعداد کل اعضا: ' . count($members);
-
-        foreach ($members as $member) {
-            // ارسال پیام به هر عضو
-            $message_response = wp_remote_post("https://api.telegram.org/bot{$token}/sendMessage", [
-                'body' => [
-                    'chat_id' => $member->user_id,
-//                    'text' => "سلام {$member->first_name}! من ربات {$bot_name} هستم.",
-                    'text' => $this->sendBotContact($member->user_id, $bot_name)
-                ]
-            ]);
-
-            $debug_output[] = "ارسال پیام به کاربر {$member->first_name}";
-        }
-
-        echo '<div class="debug-output" style="background: #f5f5f5; padding: 15px; margin: 20px 0; border: 1px solid #ddd;">' .
-            '<h3>گزارش عملیات:</h3>' .
-            '<pre>' . implode("\n", $debug_output) . '</pre>' .
-            '</div>';
-    }
+//    public function sendDirectMessageToMembers()
+//    {
+//        $token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
+//        global $wpdb;
+//        $debug_output = [];
+//        $bot_info = wp_remote_get("https://api.telegram.org/bot{$token}/getMe");
+//        $bot_data = json_decode(wp_remote_retrieve_body($bot_info));
+//        $bot_name = $bot_data->result->first_name;
+//        $debug_output[] = 'نام ربات: ' . $bot_name;
+//
+//        // دریافت لیست اعضای منحصر به فرد از همه گروه‌ها
+//
+//        $members = $wpdb->get_results("
+//        SELECT DISTINCT user_id, first_name, username
+//        FROM {$wpdb->prefix}telegram_members
+//        WHERE user_id != {$bot_data->result->id}
+//    ");
+//
+//        $debug_output[] = 'تعداد کل اعضا: ' . count($members);
+//
+//        foreach ($members as $member) {
+//            // ارسال پیام به هر عضو
+//            $message_response = wp_remote_post("https://api.telegram.org/bot{$token}/sendMessage", [
+//                'body' => [
+//                    'chat_id' => $member->user_id,
+////                    'text' => "سلام {$member->first_name}! من ربات {$bot_name} هستم.",
+//                    'text' => $this->sendBotContact($member->user_id, $bot_name)
+//                ]
+//            ]);
+//
+//            $debug_output[] = "ارسال پیام به کاربر {$member->first_name}";
+//        }
+//
+//        echo '<div class="debug-output" style="background: #f5f5f5; padding: 15px; margin: 20px 0; border: 1px solid #ddd;">' .
+//            '<h3>گزارش عملیات:</h3>' .
+//            '<pre>' . implode("\n", $debug_output) . '</pre>' .
+//            '</div>';
+//    }
 
     public function registerPortfolioPostType()
     {

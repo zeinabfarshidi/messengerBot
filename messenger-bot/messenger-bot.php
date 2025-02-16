@@ -90,10 +90,7 @@ class Messenger_Bot
         add_action('admin_menu', [$this, 'add_telegram_groups_menu']);
 //ارسال پیام به گروه‌های تلگرام
         add_action('admin_menu', [$this, 'add_menu_send_messages_to_telegram_groups']);
-        // افزودن منوی گزارش اعضا
-        add_action('admin_menu', [$this, 'add_telegram_members_report_menu']);
         add_action('admin_init', [$this, 'processing_of_sending_messages_to_telegram_groups']);
-        add_action('wp_ajax_send_to_members', [$this, 'ajax_send_to_member']);
         add_action('init', [$this, 'register_portfolio_post_type']);
         add_action('add_meta_boxes', [$this, 'add_portfolio_file_metabox']);
         add_action('save_post_portfolio', [$this, 'save_portfolio_file']);
@@ -113,9 +110,6 @@ class Messenger_Bot
         add_action('admin_init', [$this, 'save_proxy']);
         add_action('admin_init', array($this, 'delete_proxy'));
 //        ------End proxy codes------
-        register_activation_hook(__FILE__, function () {
-            $this->create_telegram_members_table();
-        });
     }
 
     //    ------Start proxy codes------
@@ -210,12 +204,12 @@ class Messenger_Bot
         $this->telegram->sendDirectMessageToMembers();
     }
 //    Add this code to AJAX handler section
-    public function ajax_send_to_member()
-    {
-        $result = $this->send_direct_message_to_members();
-        echo $result;
-        wp_die();
-    }
+//    public function ajax_send_to_member()
+//    {
+//        $result = $this->send_direct_message_to_members();
+//        echo $result;
+//        wp_die();
+//    }
 //    ------End codes for sending messages to Telegram groups------
 
 //    ------Start Portfolio Post Codes------
