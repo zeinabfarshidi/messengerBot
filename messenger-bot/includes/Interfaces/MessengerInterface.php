@@ -2,13 +2,13 @@
 namespace MessengerBot\Interfaces;
 
 interface MessengerInterface {
-    // متدهای پایه
+    // Basic methods
     public function getName(): string;
     public function initialize(): void;
 
-    // متدهای ارسال پیام
+    // Message sending methods
     public function sendMessage(string $chatId, string $message, array $options = []): array;
 
-    // متدهای مدیریت گروه
+    // Group management methods
     public function getGroupInfo(string $groupId): array;
 }

@@ -4,13 +4,13 @@ class ProxyManager{
     private $bot_token;
 
     public function __construct() {
-        $this->bot_token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
+        $this->bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
     }
 
     public function sendRequest($method, $params = []) {
         $url = "https://api.telegram.org/bot" . $this->bot_token . "/$method";
 
-        // بررسی موقعیت سرور
+        // Check server location
         $server_location = $this->get_server_location();
 
         $ch = curl_init();
@@ -21,7 +21,7 @@ class ProxyManager{
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
 
-        // فقط در سرورهای ایران از پروکسی استفاده کن
+        // Only use a proxy on Iranian servers
         if ($server_location === 'IR') {
             $proxy = $this->get_active_proxy();
             if (!$proxy) {
@@ -59,7 +59,7 @@ class ProxyManager{
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
-        // تنظیمات پروکسی
+        // Proxy settings
         $server_location = $this->get_server_location();
         if ($server_location === 'IR') {
             $proxy = $this->get_active_proxy();
@@ -90,7 +90,7 @@ class ProxyManager{
     }
 
     public function display_proxy_page() {
-        // نمایش وضعیت پروکسی فعلی
+        // Show current proxy status
         $active_proxy = $this->get_active_proxy();
         if ($active_proxy) {
             echo '<div class="notice notice-info">';
@@ -99,10 +99,9 @@ class ProxyManager{
             echo '<p>Port: ' . $active_proxy['port'] . '</p>';
             echo '<p>Type: ' . $active_proxy['type'] . '</p>';
 
-            // تست اتصال و نمایش وضعیت
+            // Connection test and status display
             $test_result = $this->test_connection($active_proxy);
             if ($test_result['success']) {
-//                echo '<p class="success">✅ اتصال برقرار است</p>';
                 echo '<p class="success">✅ ' . $test_result['details'] . '</p>';
             } else {
                 echo '<p class="error">❌ خطا در اتصال: ' . $test_result['message'] . '</p>';
@@ -289,7 +288,7 @@ class ProxyManager{
         }
     }
 
-    //    تابع دریافت پروکسی فعال:
+    //    Active proxy reception function:
     private function get_active_proxy() {
         $args = array(
             'post_type' => 'proxy',
@@ -309,7 +308,7 @@ class ProxyManager{
             return $data;
         }
 
-        // اگر هیچ پروکسی فعالی نبود، اولین پروکسی را فعال کن
+        // If no proxy is active, activate the first proxy
         $args = array(
             'post_type' => 'proxy',
             'posts_per_page' => 1
@@ -334,7 +333,7 @@ class ProxyManager{
         return $data['countryCode'] ?? '';
     }
 
-    //    تابع تغییر پروکسی:
+    //    Proxy change function:
     private function switch_to_next_proxy($current_proxy_ip) {
         $args = array(
             'post_type' => 'proxy',
@@ -343,12 +342,12 @@ class ProxyManager{
 
         $proxies = get_posts($args);
 
-        // ابتدا همه پروکسی‌ها را غیرفعال می‌کنیم
+        // First, we disable all proxies
         foreach ($proxies as $proxy) {
             update_post_meta($proxy->ID, 'proxy_status', 'inactive');
         }
 
-        // پیدا کردن پروکسی فعلی و فعال کردن پروکسی بعدی
+        // Find the current proxy and enable the next proxy
         foreach ($proxies as $key => $proxy) {
             $data = json_decode($proxy->post_content, true);
             if ($data['ip'] == $current_proxy_ip) {

@@ -17,14 +17,14 @@ class TelegramMessenger implements MessengerInterface
 
     public function __construct()
     {
-        $this->bot_token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
+        $this->bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
         $this->proxy = new ProxyManager();
         $this->group = new Group();
     }
 
     public function initialize(): void
     {
-        // بررسی و تنظیم webhook فقط اگر تنظیم نشده باشد
+        // Check and set up webhook only if not set up
         if (!get_option('telegram_webhook_set')) {
             $webhook_url = site_url('wp-json/messenger-bot/v1/webhook');
             $result = $this->setWebhook($webhook_url);
@@ -34,12 +34,12 @@ class TelegramMessenger implements MessengerInterface
             }
         }
 
-        // تعریف متد checkConnection
+        // Definition of the checkConnection method
         if ($this->checkConnection()) {
-            // اتصال برقرار است
+            // Connection is established.
             update_option('telegram_connection_status', 'connected');
         } else {
-            // مشکل در اتصال
+            // Connection problem
             update_option('telegram_connection_status', 'failed');
         }
     }
@@ -77,11 +77,11 @@ class TelegramMessenger implements MessengerInterface
     {
         $content = file_get_contents('php://input');
         $json_decode = json_decode($content, true);
-        // اگر پست در حال انتشار نیست، برگرد
+        // If the post is not publishing, go back.
         if ($post->post_status !== 'publish') {
             return;
         }
-        $token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
+
         global $wpdb;
         $category_ids = $json_decode['categories'];
         $categories_name = [];
@@ -101,24 +101,10 @@ class TelegramMessenger implements MessengerInterface
         }
 
         foreach (array_unique($groups_ids) as $groups_id) {
-//            $group_telegram = $wpdb->get_row("SELECT * FROM {$wpdb->prefix}telegram_members WHERE group_id = '$groupsId' ORDER BY id ASC LIMIT 1");
             $message = "📢 مطلب جدید در " . implode(',', $categories_name) . ":\n\n";
             $message .= "🔸 " . $post->post_title . "\n\n";
             $message .= "📝 " . wp_trim_words(strip_tags($post->post_content), 30) . "\n\n";
             $message .= "🔗 " . get_permalink($post_id);
-
-//            wp_remote_post("https://api.telegram.org/bot{$token}/sendMessage", [
-//                'body' => [
-//                    'chat_id' => $groups_id,
-//                    'text' => $message
-//                ]
-//            ]);
-
-//            $response = $this->proxy->sendRequest('sendMessage', [
-//                'chat_id' => $groups_id,
-//                'text' => $message,
-//                'parse_mode' => 'HTML'
-//            ]);
 
             $response = $this->sendMessage($groups_id, $message, []);
         }
@@ -170,12 +156,6 @@ class TelegramMessenger implements MessengerInterface
                             <input type="hidden" name="audio_data" id="audioData">
                         </td>
                     </tr>
-                    <!--                    <tr>-->
-                    <!--                        <th>ارسال به اعضای گروه‌ها</th>-->
-                    <!--                        <td>-->
-                    <!--                            <button type="button" id="sendToMembers" class="button">ارسال به همه اعضا</button>-->
-                    <!--                        </td>-->
-                    <!--                    </tr>-->
                 </table>
                 <div id="debug-results"></div>
                 <?php wp_nonce_field('send_telegram_message', 'telegram_message_nonce'); ?>
@@ -204,7 +184,7 @@ class TelegramMessenger implements MessengerInterface
                             const audioUrl = URL.createObjectURL(audioBlob);
                             $('#audioPreview').attr('src', audioUrl).show();
 
-                            // تبدیل به Base64 برای ارسال
+                            // Convert to Base64 for sending
                             const reader = new FileReader();
                             reader.readAsDataURL(audioBlob);
                             reader.onloadend = () => {
@@ -232,7 +212,7 @@ class TelegramMessenger implements MessengerInterface
                     $.post(ajaxurl, {
                         action: 'send_to_members'
                     }, function (response) {
-                        // نمایش نتایج در صفحه
+                        // Show results on the page
                         $('#debug-results').html(response);
                     });
                 });
@@ -248,7 +228,7 @@ class TelegramMessenger implements MessengerInterface
             $message = sanitize_textarea_field($_POST['message']);
             if (!empty($groups) && !empty($message)) {
                 foreach ($groups as $group_id) {
-                    // ارسال متن با پروکسی
+                    // Send text with proxy
 //                    $response = $this->proxy->sendRequest('sendMessage', [
 //                        'chat_id' => $group_id,
 //                        'text' => $message
@@ -256,11 +236,11 @@ class TelegramMessenger implements MessengerInterface
 
                     $response = $this->sendMessage($group_id, $message, []);
 
-                    // اگر فایل آپلود شده باشد
+                    // If the file has been uploaded
                     if (!empty($_FILES['attachment']['tmp_name'])) {
                         $file_path = $_FILES['attachment']['tmp_name'];
                         $file_type = wp_check_filetype($_FILES['attachment']['name'])['type'];
-                        // تشخیص نوع فایل و ارسال
+                        // Detect file type and send
                         if (strpos($file_type, 'image') !== false) {
                             $endpoint = 'sendPhoto';
                             $param = 'photo';
@@ -275,12 +255,12 @@ class TelegramMessenger implements MessengerInterface
                         }
 
                         if (isset($endpoint)) {
-                            // ارسال فایل با پروکسی
+                            // Sending files with a proxy
                             $response = $this->proxy->sendFileRequest($endpoint, [
                                 'chat_id' => $group_id,
                                 $param => new \CURLFile($file_path)
                             ]);
-                            /* کد قبلی
+                            /* Previous code
                             $ch = curl_init();
                             curl_setopt($ch, CURLOPT_URL, "https://api.telegram.org/bot{$token}/{$endpoint}");
                             curl_setopt($ch, CURLOPT_POST, 1);
@@ -294,24 +274,24 @@ class TelegramMessenger implements MessengerInterface
                             */
                         }
                     }
-                    // کد پردازش صدای ضبط شده
+                    // Recorded voice processing code
                     if (isset($_POST['audio_data']) && !empty($_POST['audio_data'])) {
                         error_log('فایل صوتی وجود دارد');
                         $audio_data = $_POST['audio_data'];
                         $audio_data = str_replace('data:audio/wav;base64,', '', $audio_data);
                         $audio_data = base64_decode($audio_data);
 
-                        // ذخیره موقت فایل صوتی
+                        // Temporary storage of audio files
                         $temp_file = wp_tempnam('audio_message');
                         file_put_contents($temp_file, $audio_data);
 
-                        // ارسال فایل صوتی با پروکسی
+                        // Sending audio files with a proxy
                         $response = $this->proxy->sendFileRequest('sendAudio', [
                             'chat_id' => $group_id,
                             'audio' => new \CURLFile($temp_file, 'audio/wav', 'audio_message.wav')
                         ]);
 
-                        /* کد قبلی
+                        /* Previous code
                         $ch = curl_init();
                         curl_setopt($ch, CURLOPT_URL, "https://api.telegram.org/bot{$token}/sendAudio");
                         curl_setopt($ch, CURLOPT_POST, 1);
@@ -324,7 +304,7 @@ class TelegramMessenger implements MessengerInterface
                         curl_close($ch);
                         */
 
-                        // پاک کردن فایل موقت
+                        // Delete temporary files
                         unlink($temp_file);
                     }
                 }
@@ -339,9 +319,7 @@ class TelegramMessenger implements MessengerInterface
 
     public function sendBotContact($chat_id, $bot_name)
     {
-        $token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
-
-        $response = wp_remote_post("https://api.telegram.org/bot{$token}/sendContact", [
+        $response = wp_remote_post("https://api.telegram.org/bot{$this->bot_token}/sendContact", [
             'body' => [
                 'chat_id' => $chat_id,
                 'phone_number' => '+98xxxxxxxxxx', // شماره تلفن ربات
@@ -351,45 +329,6 @@ class TelegramMessenger implements MessengerInterface
             ]
         ]);
     }
-
-//    public function sendDirectMessageToMembers()
-//    {
-//        $token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
-//        global $wpdb;
-//        $debug_output = [];
-//        $bot_info = wp_remote_get("https://api.telegram.org/bot{$token}/getMe");
-//        $bot_data = json_decode(wp_remote_retrieve_body($bot_info));
-//        $bot_name = $bot_data->result->first_name;
-//        $debug_output[] = 'نام ربات: ' . $bot_name;
-//
-//        // دریافت لیست اعضای منحصر به فرد از همه گروه‌ها
-//
-//        $members = $wpdb->get_results("
-//        SELECT DISTINCT user_id, first_name, username
-//        FROM {$wpdb->prefix}telegram_members
-//        WHERE user_id != {$bot_data->result->id}
-//    ");
-//
-//        $debug_output[] = 'تعداد کل اعضا: ' . count($members);
-//
-//        foreach ($members as $member) {
-//            // ارسال پیام به هر عضو
-//            $message_response = wp_remote_post("https://api.telegram.org/bot{$token}/sendMessage", [
-//                'body' => [
-//                    'chat_id' => $member->user_id,
-////                    'text' => "سلام {$member->first_name}! من ربات {$bot_name} هستم.",
-//                    'text' => $this->sendBotContact($member->user_id, $bot_name)
-//                ]
-//            ]);
-//
-//            $debug_output[] = "ارسال پیام به کاربر {$member->first_name}";
-//        }
-//
-//        echo '<div class="debug-output" style="background: #f5f5f5; padding: 15px; margin: 20px 0; border: 1px solid #ddd;">' .
-//            '<h3>گزارش عملیات:</h3>' .
-//            '<pre>' . implode("\n", $debug_output) . '</pre>' .
-//            '</div>';
-//    }
 
     public function registerPortfolioPostType()
     {
@@ -537,7 +476,7 @@ class TelegramMessenger implements MessengerInterface
         global $wpdb;
         $messengerType = $this->getName() . '_group';
         $groups = $this->group->getGroups($messengerType);
-        // دریافت گروه‌های انتخاب شده
+        // Get selected groups
         $selected_groups = [];
         if ($term && isset($term->term_id)) {
             $selected_groups = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}termmeta WHERE term_id =  '$term->term_id' LIMIT 1");
@@ -546,7 +485,7 @@ class TelegramMessenger implements MessengerInterface
             }
         }
 
-        // برای صفحه ویرایش
+        // For the edit page
         if ($term) {
             ?>
             <tr class="form-field">
@@ -570,7 +509,7 @@ class TelegramMessenger implements MessengerInterface
                 </td>
             </tr>
             <?php
-        } // برای صفحه افزودن دسته‌بندی جدید
+        } // For the Add New Category page
         else {
             ?>
             <div class="form-field">
@@ -642,7 +581,7 @@ class TelegramMessenger implements MessengerInterface
 
     public function sendTelegramMessage($group_id, $message)
     {
-//            $bot_token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
+//            $bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
 //            $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
 //            $args = array(
 //                'body' => array(
@@ -667,7 +606,7 @@ class TelegramMessenger implements MessengerInterface
     public function sendTelegramFile($group_id, $file_url)
     {
         $bot_token = get_option('telegram_bot_token');
-        // تشخیص نوع فایل
+        // File type detection
         $file_type = wp_check_filetype($file_url);
         $method = 'sendDocument';
 
@@ -747,7 +686,7 @@ class TelegramMessenger implements MessengerInterface
                             audio.src = audioUrl;
                             audio.style.display = "block";
                             
-                            // تبدیل Blob به Base64
+                            // Convert Blob to Base64
                             const reader = new FileReader();
                             reader.readAsDataURL(audioBlob);
                             reader.onloadend = function() {
@@ -766,7 +705,7 @@ class TelegramMessenger implements MessengerInterface
             });
         </script>';
 
-            // اضافه کردن recorder قبل از دکمه ارسال
+            // Add a recorder before the submit button
             $content = str_replace('</form>', $recorder_html . '</form>', $content);
         }
         return $content;
@@ -775,7 +714,6 @@ class TelegramMessenger implements MessengerInterface
     public function sendVoiceToTelegram($group_id, $voice_base64)
     {
         if (!empty($voice_base64)) {
-            $bot_token = '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8';
             $voice_data = str_replace('data:audio/wav;base64,', '', $voice_base64);
             $voice_data = str_replace(' ', '+', $voice_data);
             $voice_binary = base64_decode($voice_data);
@@ -783,14 +721,14 @@ class TelegramMessenger implements MessengerInterface
             file_put_contents($temp_file, $voice_binary);
 
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://api.telegram.org/bot{$bot_token}/sendVoice");
+            curl_setopt($ch, CURLOPT_URL, "https://api.telegram.org/bot{$this->bot_token}/sendVoice");
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, [
                 'chat_id' => $group_id,
                 'voice' => new \CURLFile($temp_file, 'audio/wav', 'voice.wav')
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // تنظیم تایم‌اوت به 60 ثانیه
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60); // Set timeout to 60 seconds
 
             $result = curl_exec($ch);
             curl_close($ch);
@@ -814,6 +752,10 @@ class TelegramMessenger implements MessengerInterface
             $this->sendMessageInBot($chat_id, $text_send, $sender_chat_id);
         }
         $this->group->saveGroup($json_decode, $this->getName());
+
+        // Send 200 OK response to Telegram
+        http_response_code(200);
+        exit();
     }
 
     public function sendMessageInBot($chat_id, $text_send, $sender_chat_id)
@@ -822,7 +764,7 @@ class TelegramMessenger implements MessengerInterface
 //        $url = "https://api.telegram.org/bot{$this->bot_token}/sendMessage?" . $param;
 //        $result = file_get_contents($url);
 
-//        ارسال با پروکسی
+//        Send by proxy
         $result = $this->proxy->sendRequest('sendMessage', [
             'chat_id' => $chat_id,
             'text' => $text_send,
@@ -836,6 +778,39 @@ class TelegramMessenger implements MessengerInterface
             $error_param = "chat_id=" . $sender_chat_id . "&text=خطا: کاربر مورد نظر باید ابتدا ربات را استارت کند ❌";
             file_get_contents("https://api.telegram.org/bot{$this->bot_token}/sendMessage?" . $error_param);
         }
+    }
+
+    public function displayRobotSettingsPage() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $bot_token = BOT_TOKEN; // Robot Token
+            $webhook_url = home_url('/wp-json/telegram/webhook'); // Webhook address
+
+            $api_url = "https://api.telegram.org/bot{$bot_token}/setWebhook?url={$webhook_url}";
+            $response = wp_remote_get($api_url);
+
+            if (is_wp_error($response)) {
+                $message = 'خطا در تنظیم وب‌هوک.';
+            } else {
+                $body = wp_remote_retrieve_body($response);
+                $result = json_decode($body, true);
+                if ($result['ok']) {
+                    $message = 'وب‌هوک با موفقیت تنظیم شد.';
+                } else {
+                    $message = 'خطا در تنظیم وب‌هوک: ' . $result['description'];
+                }
+            }
+
+            echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
+        }
+
+        ?>
+        <div class="wrap">
+            <h1>تنظیمات ربات تلگرام</h1>
+            <form method="post">
+                <?php submit_button('تنظیم وب‌هوک'); ?>
+            </form>
+        </div>
+        <?php
     }
 
 }

@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 define('MESSENGER_BOT_VERSION', '1.0.0');
 define('MESSENGER_BOT_PATH', plugin_dir_path(__FILE__));
 define('MESSENGER_BOT_URL', plugin_dir_url(__FILE__));
-define('BOT_TOKEN', '7681362529:AAHUjV8JgDlNJWjjsnATUjK9Svujcmjmq_8');
+define('BOT_TOKEN', '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA');
 
 require_once MESSENGER_BOT_PATH . 'includes/Messengers/TelegramMessenger.php';
 require_once MESSENGER_BOT_PATH . 'includes/class-messenger-manager.php';
@@ -26,7 +26,7 @@ use MessengerBot\Messengers\ProxyManager;
 use MessengerBot\Models\Group;
 
 spl_autoload_register(function ($class) {
-    // اضافه کردن یک log برای دیباگ
+    // Add a log for debugging
     error_log("Trying to load: " . $class);
 
     $prefix = 'MessengerBot\\';
@@ -40,7 +40,7 @@ spl_autoload_register(function ($class) {
     $relative_class = substr($class, $len);
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
 
-    // اضافه کردن log برای مسیر فایل
+    // Add log to file path
     error_log("Looking for file: " . $file);
 
     if (file_exists($file)) {
@@ -88,7 +88,7 @@ class Messenger_Bot
         add_action('edited_category', [$this, 'save_telegram_groups']);
         add_action('publish_post', [$this, 'send_post_to_telegram_groups'], 10, 2);
         add_action('admin_menu', [$this, 'add_telegram_groups_menu']);
-//ارسال پیام به گروه‌های تلگرام
+//Sending messages to Telegram groups
         add_action('admin_menu', [$this, 'add_menu_send_messages_to_telegram_groups']);
         add_action('admin_init', [$this, 'processing_of_sending_messages_to_telegram_groups']);
         add_action('init', [$this, 'register_portfolio_post_type']);
@@ -110,6 +110,8 @@ class Messenger_Bot
         add_action('admin_init', [$this, 'save_proxy']);
         add_action('admin_init', array($this, 'delete_proxy'));
 //        ------End proxy codes------
+
+        add_action('admin_menu', [$this, 'add_robot_settings_menu']);
     }
 
     //    ------Start proxy codes------
@@ -203,13 +205,6 @@ class Messenger_Bot
     public function send_direct_message_to_members() {
         $this->telegram->sendDirectMessageToMembers();
     }
-//    Add this code to AJAX handler section
-//    public function ajax_send_to_member()
-//    {
-//        $result = $this->send_direct_message_to_members();
-//        echo $result;
-//        wp_die();
-//    }
 //    ------End codes for sending messages to Telegram groups------
 
 //    ------Start Portfolio Post Codes------
@@ -277,6 +272,24 @@ class Messenger_Bot
         $this->telegram->processTelegramWebhook();
     }
     //    ------End sending messages in the bot------
+
+//    Start Robot settings
+    public function add_robot_settings_menu() {
+        add_menu_page(
+            'تنظیمات ربات',             // Page title
+            'تنظیمات ربات',             // Menu title
+            'manage_options',           // Access level
+            'robot-settings',           // Menu ID
+            [$this, 'display_robot_settings_page'], // Page display function
+            'dashicons-admin-generic',  // Menu icon
+            25                          // Position in the menu
+        );
+    }
+
+    public function display_robot_settings_page() {
+        $this->telegram->displayRobotSettingsPage();
+    }
+    //    End Robot settings
 
 }
 

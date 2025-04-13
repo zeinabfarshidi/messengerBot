@@ -25,12 +25,12 @@ class Group {
 
     public function saveGroup($json_decode, $messengerType) {
         if (isset($json_decode['message']['left_chat_member'])) {
-            // حذف گروه اگر ربات از آن خارج شده
+            // Delete group if bot has left it
             $user = $json_decode['message']['left_chat_member'];
             $chat = $json_decode['message']['chat'];
 
             if ($user['is_bot']) {
-                // پیدا کردن پست با group_id
+                // Find post with group_id
                 $args = array(
                     'post_type' => $messengerType . '_group',
                     'meta_key' => 'group_id',
@@ -40,7 +40,7 @@ class Group {
 
                 $posts = get_posts($args);
                 if (!empty($posts)) {
-                    wp_delete_post($posts[0]->ID, true); // true برای حذف کامل از دیتابیس
+                    wp_delete_post($posts[0]->ID, true); // true to completely remove from the database
                     error_log('ربات از گروه ' . $chat['title'] . ' حذف شد');
                 }
             }
@@ -49,7 +49,7 @@ class Group {
             if ($json_decode['message']['new_chat_member'] && $json_decode['message']['new_chat_member']['is_bot']) {
                 $chat = $json_decode['message']['chat'];
 
-                // بررسی وجود گروه در دیتابیس
+                // Checking the existence of a group in the database
                 $exists = get_posts(array(
                     'post_type' => $messengerType . '_group',
                     'meta_key' => 'group_id',
