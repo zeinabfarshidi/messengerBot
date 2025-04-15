@@ -26,26 +26,13 @@ use MessengerBot\Messengers\ProxyManager;
 use MessengerBot\Models\Group;
 
 spl_autoload_register(function ($class) {
-    // Add a log for debugging
-    error_log("Trying to load: " . $class);
-
     $prefix = 'MessengerBot\\';
     $base_dir = plugin_dir_path(__FILE__);
-
     $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-
+    if (strncmp($prefix, $class, $len) !== 0) return;
     $relative_class = substr($class, $len);
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-
-    // Add log to file path
-    error_log("Looking for file: " . $file);
-
-    if (file_exists($file)) {
-        require $file;
-    }
+    if (file_exists($file)) require $file;
 });
 
 class Messenger_Bot
@@ -58,9 +45,7 @@ class Messenger_Bot
 
     public static function get_instance()
     {
-        if (null === self::$instance) {
-            self::$instance = new self();
-        }
+        if (null === self::$instance) self::$instance = new self();
         return self::$instance;
     }
 
@@ -88,7 +73,6 @@ class Messenger_Bot
         add_action('edited_category', [$this, 'save_telegram_groups']);
         add_action('publish_post', [$this, 'send_post_to_telegram_groups'], 10, 2);
         add_action('admin_menu', [$this, 'add_telegram_groups_menu']);
-//Sending messages to Telegram groups
         add_action('admin_menu', [$this, 'add_menu_send_messages_to_telegram_groups']);
         add_action('admin_init', [$this, 'processing_of_sending_messages_to_telegram_groups']);
         add_action('init', [$this, 'register_portfolio_post_type']);
@@ -101,38 +85,36 @@ class Messenger_Bot
         add_action('portfolio_category_edit_form_fields', [$this, 'add_telegram_groups_to_portfolio_category']);
         add_action('created_portfolio_category', [$this, 'save_portfolio_telegram_groups']);
         add_action('edited_portfolio_category', [$this, 'save_portfolio_telegram_groups']);
-        add_action('template_redirect', [$this, 'process_portfolio_telegram_notification']);
-        add_filter('the_content', [$this, 'add_portfolio_categories_to_content']);
-        add_filter('the_content', [$this, 'add_voice_recorder_to_portfolio_form']);
-        add_action('rest_api_init', [$this, 'process_telegram_webhook']);
-//        ------Start proxy codes------
+        add_action('rest_api_init', [$this, 'register_telegram_webhook_route']);
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'save_proxy']);
-        add_action('admin_init', array($this, 'delete_proxy'));
-//        ------End proxy codes------
-
+        add_action('admin_init', [$this, 'delete_proxy']);
         add_action('admin_menu', [$this, 'add_robot_settings_menu']);
+        add_action('template_redirect', [$this, 'process_portfolio_telegram_notification']);
     }
 
-    //    ------Start proxy codes------
-    public function add_admin_menu()
+    public function register_telegram_webhook_route()
     {
-        $this->proxy->add_admin_menu();
+        register_rest_route(
+            'telegram', '/webhook',
+            [
+                'methods' => 'POST',
+                'callback' => [$this, 'process_telegram_webhook'],
+                'permission_callback' => '__return_true'
+            ]
+        );
     }
 
-    public function save_proxy()
+    public function process_telegram_webhook()
     {
-        $this->proxy->save_proxy();
+        $this->telegram->processTelegramWebhook();
+        return new WP_REST_Response(['status' => 'ok'], 200);
     }
 
-    public function delete_proxy()
+    public function add_telegram_groups_field()
     {
-        $this->proxy->delete_proxy();
-    }
-    //    ------End proxy codes------
-
-//    ------Start View and save Telegram groups in categories------
-    public function add_telegram_groups_field(){
+        $message = $this->update_telegram_webhook();
+        echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
         $messengerType = $this->telegram->getName() . '_group';
         $this->group->addGroupsField($messengerType);
     }
@@ -147,44 +129,22 @@ class Messenger_Bot
     {
         $this->group->saveGroups($term_id);
     }
-//    ------End View and save Telegram groups in categories------
 
-//    ------Start codes List of Telegram groups that the robot is a member of------
-    public function add_telegram_groups_menu()
-    {
-        add_menu_page(
-            'گروه‌های تلگرام',    // عنوان صفحه
-            'گروه‌های تلگرام',    // عنوان منو
-            'manage_options',      // سطح دسترسی
-            'telegram-groups',     // شناسه منو
-            [$this, 'display_telegram_groups_page'], // تابع نمایش صفحه
-            'dashicons-groups',    // آیکون
-            25                     // موقعیت در منو
-        );
-    }
-
-    public function display_telegram_groups_page()
-    {
-        $messengerType = $this->telegram->getName() . '_group';
-        $this->group->displayGroupsPage($messengerType);
-    }
-//    ------End codes List of Telegram groups that the robot is a member of------
-
-//    ------Start codes for automatically sending posts to Telegram groups------
     public function send_post_to_telegram_groups($post_id, $post)
     {
         $this->telegram->sendPostToTelegramGroups($post_id, $post);
     }
-//    ------End codes for automatically sending posts to Telegram groups------
 
-//    ------Start codes for sending messages to Telegram groups------
-    public function display_telegram_send_message_page() {
+    public function display_telegram_send_message_page()
+    {
         $this->telegram->displayTelegramSendMessagePage();
     }
+
     public function processing_of_sending_messages_to_telegram_groups()
     {
         $this->telegram->processingOfSendingMessagesToTelegramGroups();
     }
+
     public function add_menu_send_messages_to_telegram_groups()
     {
         add_menu_page(
@@ -193,104 +153,77 @@ class Messenger_Bot
             'manage_options',
             'telegram-send-message',
             [$this, 'display_telegram_send_message_page'],
-            'dashicons-megaphone',
-            26
-        );
+            'dashicons-megaphone', 26);
     }
-//    Sending bot contacts to users
-    public function send_bot_contact($chat_id) {
-        $this->telegram->sendBotContact($chat_id, 'zf_bot');
-    }
-//    Getting a list of group members and sending messages to them
-    public function send_direct_message_to_members() {
-        $this->telegram->sendDirectMessageToMembers();
-    }
-//    ------End codes for sending messages to Telegram groups------
 
-//    ------Start Portfolio Post Codes------
-    public function register_portfolio_post_type() {
+    public function register_portfolio_post_type()
+    {
         $this->telegram->registerPortfolioPostType();
     }
-//    Add File Upload Metabox
-    public function add_portfolio_file_metabox() {
+
+    public function add_portfolio_file_metabox()
+    {
         $this->telegram->addPortfolioFileMetabox();
     }
-    public function render_portfolio_file_metabox($post) {
-        $this->telegram->renderPortfolioFileMetabox($post);
-    }
-    public function save_portfolio_file($post_id) {
+
+    public function save_portfolio_file($post_id)
+    {
         $this->telegram->savePortfolioFile($post_id);
     }
-//    Add Notification Button to Portfolio Screen
-    public function add_telegram_notification_button($content) {
+
+    public function add_telegram_notification_button($content)
+    {
         return $this->telegram->addTelegramNotificationButton($content);
     }
-//    JavaScript Codes
-    public function add_telegram_notify_scripts() {
+
+    public function add_telegram_notify_scripts()
+    {
         $this->telegram->addTelegramNotifyScripts();
     }
-//    Create Categories for Portfolio
-    public function register_portfolio_taxonomy() {
+
+    public function register_portfolio_taxonomy()
+    {
         $this->telegram->registerPortfolioTaxonomy();
     }
-//    Add Telegram Groups Field to Portfolio Category
 
-    public function add_telegram_groups_to_portfolio_category($term = null) {
+    public function add_telegram_groups_to_portfolio_category($term = null)
+    {
         $this->telegram->addTelegramGroupsToPortfolioCategory($term);
     }
-    public function save_portfolio_telegram_groups($term_id) {
+
+    public function save_portfolio_telegram_groups($term_id)
+    {
         $this->telegram->savePortfolioTelegramGroups($term_id);
     }
-//    Processing Sending Messages to Telegram Groups in Portfolio
+
+    public function add_portfolio_categories_to_content($content)
+    {
+        return $this->telegram->addPortfolioCategoriesToContent($content);
+    }
+
+    public function add_voice_recorder_to_portfolio_form($content)
+    {
+        return $this->telegram->addVoiceRecorderToPortfolioForm($content);
+    }
+
+    public function add_admin_menu()
+    {
+        $this->proxy->add_admin_menu();
+    }
+
+    public function save_proxy()
+    {
+        $this->proxy->save_proxy();
+    }
+
+    public function delete_proxy()
+    {
+        $this->proxy->delete_proxy();
+    }
+
     public function process_portfolio_telegram_notification() {
         $this->telegram->processPortfolioTelegramNotification();
     }
-    public function send_message_to_telegram($group_id, $message) {
-        $this->telegram->sendMessageToTelegram($group_id, $message);
-    }
-    public function send_telegram_message($group_id, $message) {
-        $this->telegram->sendTelegramMessage($group_id, $message);
-    }
-    public function send_telegram_file($group_id, $file_url) {
-        $this->telegram->sendTelegramFile($group_id, $file_url);
-    }
-    public function add_portfolio_categories_to_content($content) {
-        $this->telegram->addPortfolioCategoriesToContent($content);
-    }
-//    Adding Audio Record Button to Form
-    public function add_voice_recorder_to_portfolio_form($content) {
-        $this->telegram->addVoiceRecorderToPortfolioForm($content);
-    }
-//    Sending Audio Message to Telegram
-    public function send_voice_to_telegram($group_id, $voice_base64) {
-        $this->telegram->sendVoiceToTelegram($group_id, $voice_base64);
-    }
-    //    ------End Portfolio Post Codes------
-
-//    ------Start sending messages in the bot------
-    public function process_telegram_webhook() {
-        $this->telegram->processTelegramWebhook();
-    }
-    //    ------End sending messages in the bot------
-
-//    Start Robot settings
-    public function add_robot_settings_menu() {
-        add_menu_page(
-            'تنظیمات ربات',             // Page title
-            'تنظیمات ربات',             // Menu title
-            'manage_options',           // Access level
-            'robot-settings',           // Menu ID
-            [$this, 'display_robot_settings_page'], // Page display function
-            'dashicons-admin-generic',  // Menu icon
-            25                          // Position in the menu
-        );
-    }
-
-    public function display_robot_settings_page() {
-        $this->telegram->displayRobotSettingsPage();
-    }
-    //    End Robot settings
-
 }
 
 function messenger_bot()
@@ -299,5 +232,3 @@ function messenger_bot()
 }
 
 messenger_bot();
-
-

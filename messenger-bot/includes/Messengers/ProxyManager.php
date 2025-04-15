@@ -4,7 +4,7 @@ class ProxyManager{
     private $bot_token;
 
     public function __construct() {
-        $this->bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
+        $this->bot_token = BOT_TOKEN;
     }
 
     public function sendRequest($method, $params = []) {

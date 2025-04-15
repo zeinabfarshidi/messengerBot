@@ -17,7 +17,7 @@ class TelegramMessenger implements MessengerInterface
 
     public function __construct()
     {
-        $this->bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
+        $this->bot_token = BOT_TOKEN;
         $this->proxy = new ProxyManager();
         $this->group = new Group();
     }
@@ -112,6 +112,9 @@ class TelegramMessenger implements MessengerInterface
 
     public function displayTelegramSendMessagePage()
     {
+        $message = $this->update_telegram_webhook();
+        echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
+
         $messengerType = $this->getName() . '_group';
         $groups = $this->group->getGroups($messengerType);
         ?>
@@ -473,6 +476,9 @@ class TelegramMessenger implements MessengerInterface
 
     public function addTelegramGroupsToPortfolioCategory($term = null)
     {
+        $message = $this->update_telegram_webhook();
+        echo '<div class="notice notice-info"><p>' . esc_html($message) . '</p></div>';
+
         global $wpdb;
         $messengerType = $this->getName() . '_group';
         $groups = $this->group->getGroups($messengerType);
@@ -581,17 +587,6 @@ class TelegramMessenger implements MessengerInterface
 
     public function sendTelegramMessage($group_id, $message)
     {
-//            $bot_token = '7681362529:AAFXTA5HllMf9LtgyZUo4F5bmjb5qNhDIGA';
-//            $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
-//            $args = array(
-//                'body' => array(
-//                    'chat_id' => $group_id,
-//                    'text' => $message,
-//                    'parse_mode' => 'HTML'
-//                )
-//            );
-//            $response = wp_remote_post($url, $args);
-
         $response = $this->proxy->sendRequest('sendMessage', [
             'chat_id' => $group_id,
             'text' => $message,
@@ -758,6 +753,12 @@ class TelegramMessenger implements MessengerInterface
         exit();
     }
 
+
+
+
+
+
+
     public function sendMessageInBot($chat_id, $text_send, $sender_chat_id)
     {
 //        $param = "chat_id=" . $chat_id . "&text=" . $text_send . "&parse_mode=HTML";
@@ -780,37 +781,40 @@ class TelegramMessenger implements MessengerInterface
         }
     }
 
-    public function displayRobotSettingsPage() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $bot_token = BOT_TOKEN; // Robot Token
-            $webhook_url = home_url('/wp-json/telegram/webhook'); // Webhook address
+    function update_telegram_webhook() {
+        $bot_token = BOT_TOKEN;
+        $webhook_url = home_url('/wp-json/telegram/webhook');
 
-            $api_url = "https://api.telegram.org/bot{$bot_token}/setWebhook?url={$webhook_url}";
-            $response = wp_remote_get($api_url);
+        // دریافت وضعیت فعلی وب‌هوک
+        $get_webhook_info_url = "https://api.telegram.org/bot{$bot_token}/getWebhookInfo";
+        $response_info = wp_remote_get($get_webhook_info_url);
 
-            if (is_wp_error($response)) {
-                $message = 'خطا در تنظیم وب‌هوک.';
-            } else {
-                $body = wp_remote_retrieve_body($response);
-                $result = json_decode($body, true);
-                if ($result['ok']) {
-                    $message = 'وب‌هوک با موفقیت تنظیم شد.';
-                } else {
-                    $message = 'خطا در تنظیم وب‌هوک: ' . $result['description'];
-                }
-            }
-
-            echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
+        if (is_wp_error($response_info)) {
+            return '❌ خطا در بررسی وضعیت وب‌هوک.';
         }
 
-        ?>
-        <div class="wrap">
-            <h1>تنظیمات ربات تلگرام</h1>
-            <form method="post">
-                <?php submit_button('تنظیم وب‌هوک'); ?>
-            </form>
-        </div>
-        <?php
+        $body_info = wp_remote_retrieve_body($response_info);
+        $result_info = json_decode($body_info, true);
+
+        if (isset($result_info['result']['url']) && $result_info['result']['url'] === $webhook_url) {
+            return '✅ وب‌هوک از قبل به درستی تنظیم شده است.';
+        }
+
+        // تنظیم مجدد وب‌هوک در صورت تفاوت
+        $api_url = "https://api.telegram.org/bot{$bot_token}/setWebhook?url={$webhook_url}";
+        $response = wp_remote_get($api_url);
+
+        if (is_wp_error($response)) {
+            return '❌ خطا در تنظیم وب‌هوک.';
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        if ($result['ok']) {
+            return '✅ وب‌هوک با موفقیت تنظیم شد.';
+        } else {
+            return '❌ خطا در تنظیم وب‌هوک: ' . $result['description'];
+        }
     }
 
 }

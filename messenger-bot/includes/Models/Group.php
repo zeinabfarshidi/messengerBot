@@ -117,27 +117,4 @@ class Group {
             update_term_meta($term_id, 'telegram_members', $json_groups);
         }
     }
-
-    public function displayGroupsPage($messengerType) {
-        echo '<div class="wrap">';
-        echo '<h1>گروه‌های تلگرام</h1>';
-        $groups = $this->getGroups($messengerType);
-
-        if ($groups) {
-            echo '<h3>گروه‌های موجود</h3>';
-            echo '<table class="wp-list-table widefat fixed striped">';
-            echo '<thead><tr><th>نام گروه</th><th>شناسه گروه</th></tr></thead>';
-            echo '<tbody>';
-            foreach($groups as $group) {
-                echo '<tr>';
-                echo '<td>' . esc_html($group['title']) . '</td>';
-                echo '<td>' . esc_html($group['id']) . '</td>';
-                echo '</tr>';
-            }
-            echo '</tbody></table>';
-        }
-        echo '</div>';
-    }
-
-
 }
